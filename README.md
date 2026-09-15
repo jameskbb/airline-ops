@@ -1,57 +1,70 @@
 # FlightOps Intelligence
 
-**U.S. airline operations and network performance, built on official DOT on-time data.**
+![FlightOps Intelligence title card: an airline operations desk with a U.S. route map and performance trends](docs/images/readme-title-flightops-intelligence.png)
 
-![Executive Overview](docs/screenshots/overview.png)
+Turn official U.S. on-time data into a clear view of network reliability, airport friction, route health, carrier
+performance and delay propagation. FlightOps Intelligence ships with **36 months and 22.9 million flights** already
+processed, so the dashboard works from the first clone.
 
-## What it does
+[![FlightOps Intelligence executive overview with network KPIs, trends, hotspots and an operations brief](docs/screenshots/overview.png)](docs/screenshots/overview.png)
 
-Airline operations teams need to know how the network ran, what changed and where the problems are concentrated. They
-need numbers they can trust and defend. Public on-time data can answer those questions, but it arrives as roughly
-650,000 raw rows a month across 120 columns, with reporting quirks that make naive analysis wrong.
+The app is built for questions that need defensible answers:
 
-FlightOps Intelligence turns 22.9 million U.S. flight records into an operational view of network reliability, airport
-friction, route health, carrier benchmarking and delay propagation.
+- **See what changed.** Compare the selected period with both the preceding period and the same period last year.
+- **Find where it matters.** Rank unusual changes by estimated affected flights instead of surfacing every fluctuation.
+- **Compare like with like.** Benchmark airports within hub tiers and routes within documented distance and volume peers.
+- **Trace the answer.** Open the definition, inputs, exact SQL, result and stored source rows behind any aggregate.
+- **Know the limits.** Coverage, reporting lag, lineage, data-quality checks and methodology stay visible in the product.
 
-- **Governed metrics.** Every KPI has one definition, one direction (is up good or bad?) and one place in the code.
-- **Traceable numbers.** Every aggregated figure has a **?** that shows its definition, the input measures and the exact
-  SQL that produced it, with a link into the **Data Explorer**, where the result and the source rows can be inspected and
-  exported to CSV.
-- **Honest comparisons.** Rates move in percentage points, comparisons run against the prior period and the same period
-  last year, and minimum-volume rules keep a 40-flight route from outranking a trunk route.
-- **Signals instead of hunting.** A deterministic engine surfaces material, unusual changes and ranks them by estimated
-  affected flights.
-- **Visible lineage.** Source, coverage, data-quality checks and reconciliation are shown in the product itself.
+This is historical monthly reporting from the U.S. Bureau of Transportation Statistics (BTS), not live flight status.
+The app reads its coverage from the loaded data and shows it on every page.
 
-The data is historical monthly reporting from the Bureau of Transportation Statistics, not live flight status. The app
-shows the loaded coverage ("Data through June 2026") on every page and computes it from the data, never hard-coding it.
+![Questions it answers section header: a U.S. route network branches into airport, route and carrier analysis](docs/images/readme-header-questions.png)
 
-## Key capabilities
+## Questions it answers
 
-| Page | Question it answers |
-|---|---|
-| **Executive Overview** | How healthy was the network in the latest period, what changed, and where is the friction? Six KPI cards with prior-period and YoY deltas, a network health trend, a calculated *Latest Operations Brief*, airport hotspots, the delay-cause mix and a carrier snapshot. |
-| **Network Map** | Where does friction sit geographically? Airports are sized by departures and colored against the network value, with route arcs for any selected airport and an **airport × departure-hour heatmap** showing where the operating day breaks down. |
-| **Signals** | What changed that an operations executive should know about? Network-relative shifts in on-time, cancellation, severe-delay and taxi-out performance, delay concentration, cause-mix shifts and improvement streaks. Each signal states magnitude, baseline, comparison window, impact and why it matters. |
-| **Airport Performance** | An operating profile: KPIs, a percentile against same-tier hubs, month × hour delay build-up, day-of-week pattern, cause mix, carriers, problem routes and best/worst destinations. |
-| **Route Intelligence** | Directional route KPIs, block-time vs actual, performance by carrier, hour and day, and a **reliability percentile against a documented peer group** (same distance band, minimum volume). |
-| **Carrier Benchmarking** | A sortable ranking, a reliability-vs-cancellation positioning chart, multi-carrier trends and a *relative strengths* matrix oriented so that blue always means better. |
-| **Delay Drivers** | Reported cause mix over time, by carrier, by airport and by time of day, plus the **Delay Propagation Index**: how much of each station's delay is associated with late-arriving aircraft. |
-| **Data Explorer** | Where did this number come from? The *query store* lists every query the dashboard ran in your session, with its SQL, result, the stored rows it summed and CSV export. The *Tables* tab browses any fact or dimension table with all raw columns, filters and CSV export. |
-| **Methodology** | Definitions rendered from the metric layer itself, grain design, lineage, limitations and 15 data-quality checks. |
+| Page | Use it to answer |
+| --- | --- |
+| **Executive Overview** | How healthy was the network, what changed, and where is operational friction concentrated? |
+| **Network Map** | Where is friction geographically, and at what departure hours does it build? |
+| **Signals** | Which changes are material, unusual and large enough to matter operationally? |
+| **Airport Performance** | How is a station performing against similar hubs, by month, hour, weekday, carrier and route? |
+| **Route Intelligence** | How reliable is a directional route against comparable routes, and when does it break down? |
+| **Carrier Benchmarking** | How do carriers compare on reliability, cancellation, trend and relative strengths? |
+| **Delay Drivers** | Which reported causes dominate, and how much delay is associated with late-arriving aircraft? |
+| **Data Explorer** | What query produced a number, which stored rows fed it, and can I export them? |
+| **Methodology** | How are metrics, grains, peer groups, limitations and data-quality checks defined? |
 
-### Tracing a number
+The global period, marketing-carrier, origin and destination filters stay consistent across the dashboard. The latest
+period also produces a deterministic operations brief: rules choose statements from calculated facts, so narrative
+never invents a number.
 
-1. Click the **?** on any KPI card or chart section. It shows the metric's definition and calculation, the input
-   measures behind the value (current, prior period and prior year), and the SQL that produced them.
-2. Click **Open in Data Explorer**. The query is preselected in the *Query store* tab with its result, the stored rows
-   it summed and a CSV download.
-3. Use the *Tables* tab to browse any fact or dimension table with all of its raw columns, filters and CSV export.
+![Trust every number section header: a metric definition leads to SQL and then source rows](docs/images/readme-header-traceability.png)
 
-The query store belongs to your session. It lists every query the pages you visited ran, including the filter options,
-signals and operations-brief inputs.
+## Trust every number
 
-## Architecture
+Every KPI card and chart section has a **?** control:
+
+1. Open it to see the metric definition, calculation, current-period inputs, comparison inputs and exact SQL.
+2. Select **Open in Data Explorer** to jump to that query's result and the stored rows it aggregated.
+3. Inspect filters and unapplied dimensions, then export either the result or source rows as CSV.
+
+The query store is session-local and records every query run by the pages you visit, including filter options, signals
+and operations-brief inputs. The SQL shown is the SQL executed.
+
+### Why the comparisons hold up
+
+- Rates are derived after aggregation from additive counts and minute sums; the app never averages averages.
+- Rate changes are shown in percentage points, with separate prior-period and year-over-year comparisons.
+- Marketing-carrier rollups include regional flying under the customer-facing brand and exclude BTS duplicate code-share
+  records.
+- Airport peers use FAA-style hub tiers. Route peers use the same distance band and require at least 90 flights a month.
+- Signals compare each entity's network-relative gap with its trailing three-month gap, then apply materiality,
+  unusualness and volume thresholds.
+
+![How it fits together section header: official monthly data becomes analytical facts, governed metrics and a dashboard](docs/images/readme-header-architecture.png)
+
+## How it fits together
 
 ```mermaid
 flowchart LR
@@ -71,26 +84,21 @@ flowchart LR
     S --> X["Data Explorer<br/>SQL · results · source rows · CSV"]
 ```
 
-```
-app.py                      entrypoint: page config, navigation, global filters
-assets/                     logo, icon, style.css (small layout tweaks on top of the theme)
-src/flightops/
-  data/        source.py (PREZIP discovery/download) · schema.py (source contract)
-               transform.py (per-month staging, DQ, fact partitions) · pipeline.py (sync, prune, reconcile)
-               query.py (Query spec: table contract, SQL, IDs) · store.py (executes queries on DuckDB)
-               measures.py (additive measure contract) · reference.py
-  metrics/     definitions.py (every KPI) · compare.py (direction-aware deltas) · periods.py
-  analytics/   benchmarks.py (peer groups, percentiles, hotspots) · signals.py · facts.py
-  narrative/   deterministic.py (brief rules) · providers.py (deterministic + optional LLM)
-  charts/      theme.py (design tokens, Plotly template) · builders.py · maps.py (PyDeck)
-  ui/          data.py (caching + query store) · filters.py · components.py (native widgets, ? popovers) · nav.py
-  pages/       one module per page, including explorer.py
-scripts/sync_bts.py         CLI for the pipeline
-data/processed/             committed Parquet facts (~51 MB for 36 months)
-data/metadata/              coverage + per-month data-quality reports
-```
+| Path | Responsibility |
+| --- | --- |
+| `app.py` | Page configuration, navigation and global filters. |
+| `src/flightops/data/` | Source discovery, schema contract, transformation, reconciliation, query specs and DuckDB execution. |
+| `src/flightops/metrics/` | Canonical KPI definitions, direction-aware comparisons and period logic. |
+| `src/flightops/analytics/` | Peer benchmarks, percentiles, hotspots, signals and structured facts. |
+| `src/flightops/narrative/` | Deterministic brief rules and the optional constrained LLM narrator. |
+| `src/flightops/charts/` | Shared design tokens, Plotly builders and PyDeck maps. |
+| `src/flightops/ui/` | Caching, filters, components, navigation and the session query store. |
+| `src/flightops/pages/` | One module per dashboard page, including the Data Explorer. |
+| `scripts/sync_bts.py` | Idempotent data-discovery, download and processing CLI. |
+| `data/processed/` | Committed Parquet facts: about 51 MB for 36 months. |
+| `data/metadata/` | Coverage metadata and per-month data-quality reports. |
 
-### Design decisions
+### Engineering choices
 
 - **Marketing-carrier dataset.** Regional flying sold as American Eagle, Delta Connection or United Express rolls up to
   the brand, which matches how customers and executives think about an airline. Records BTS flags as duplicate code-share
@@ -109,9 +117,8 @@ data/metadata/              coverage + per-month data-quality reports
   the app is the SQL that runs. Filters a table cannot honor are recorded as *not applied* and shown, never dropped
   silently. Results are cached with `st.cache_data`; the DuckDB store is a single `st.cache_resource` that opens a
   cursor per query. Pages record each query in the session's query store, which the Data Explorer reads.
-- **Numbers before narrative.** The *Latest Operations Brief* is generated by rules from a structured facts object. An
-  optional LLM narrator can be switched on, but it only receives those facts and cannot calculate. Its output is
-  discarded if it contains any figure that isn't in the facts.
+- **Numbers before narrative.** The *Latest Operations Brief* is generated by rules from structured facts. An optional
+  LLM can narrate only those facts; output containing an unapproved figure is discarded.
 
 ## Analytics methodology
 
@@ -137,7 +144,7 @@ Because the test is network-relative, a system-wide thunderstorm month doesn't f
 scale (affected flights per month) with unusualness. The full rules are on the Signals page and in
 `src/flightops/analytics/signals.py`.
 
-## Data source
+## Data
 
 - **Primary:** U.S. DOT Bureau of Transportation Statistics, *Marketing Carrier On-Time Performance (Beginning January
   2018)*, downloaded directly from the TranStats PREZIP directory (`https://transtats.bts.gov/PREZIP/`).
@@ -145,9 +152,12 @@ scale (affected flights per month) with unusualness. The full rules are on the S
 - **Included now:** July 2023 – June 2026 (36 months), 22,866,159 flights, 370 airports, 8–10 marketing carriers
   depending on month.
 
-BTS data is a public-domain work of the U.S. Government.
+BTS data is a public-domain work of the U.S. Government. The committed analytical layer contains aggregates rather than
+individual flight records; its lowest grain is day × marketing carrier × origin.
 
-## Running locally
+![Run it yourself section header: a terminal leads to a local browser and the FlightOps dashboard](docs/images/readme-header-run-it-yourself.png)
+
+## Run it yourself
 
 ```bash
 git clone https://github.com/jameskbb/airline-ops.git
@@ -157,7 +167,8 @@ pip install -e ".[dev]"
 streamlit run app.py
 ```
 
-The processed dataset is committed, so the app runs immediately with no downloads and no API keys.
+Open the local URL printed by Streamlit. The processed dataset is committed, so startup needs no BTS download and no API
+key.
 
 ## Updating data
 
@@ -186,14 +197,14 @@ by `FLIGHTOPS_DATA_DIR`.
 **Optional LLM brief.** Install `.[llm]` and set `FLIGHTOPS_BRIEF_PROVIDER=anthropic` and `ANTHROPIC_API_KEY`, as
 environment variables or Streamlit secrets. Without them, the deterministic brief is used.
 
-## Tests
+## Develop
 
 ```bash
-pytest -q          # 65 tests; nothing downloads BTS data
-ruff check .
+python -m pytest -q
+python -m ruff check src tests scripts app.py
 ```
 
-The suite covers:
+Nothing in the test suite downloads BTS data. It covers:
 - query building, IDs, parameterized SQL and not-applied filters
 - every page rendering through Streamlit's `AppTest`, unfiltered and under filter combinations, and pages recording
   their queries in the query store
@@ -210,7 +221,7 @@ The suite covers:
 
 CI (`.github/workflows/ci.yml`) runs lint, tests and a reconciliation check of the committed data.
 
-## Technology
+### Technology
 
 Python 3.11+, Streamlit (`st.navigation` / `st.Page`), DuckDB, Parquet (zstd), pandas, Plotly, PyDeck with CARTO
 basemaps, pytest, ruff and GitHub Actions.
