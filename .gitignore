@@ -1,0 +1,24 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+.pytest_cache/
+.ruff_cache/
+build/
+dist/
+
+# Raw BTS downloads and scratch files (reproducible from source)
+data/raw/
+data/cache/
+data/reference/
+*.part
+
+# Secrets
+.streamlit/secrets.toml
+.env
+
+# OS / editor
+.DS_Store
+.idea/
+.vscode/

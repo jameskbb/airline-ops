@@ -1,0 +1,56 @@
+name: Refresh BTS data
+
+# BTS publishes each month's on-time file roughly 60-75 days after month end, on no fixed
+# day. Checking weekly finds new months quickly; runs with nothing new exit without a commit.
+on:
+  schedule:
+    - cron: "17 11 * * 1"
+  workflow_dispatch:
+    inputs:
+      months:
+        description: "Rolling window length in months"
+        default: "36"
+      force:
+        description: "Reprocess months already loaded (true/false)"
+        default: "false"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: refresh-data
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          python-version: "3.12"
+      - name: Install
+        run: uv pip install --system -e ".[dev]"
+      - name: Sync BTS months (idempotent)
+        # Loaded months are skipped; only newly published months are downloaded and processed.
+        # Months that fall outside the rolling window are pruned. The sync fails loudly on
+        # schema changes or if fact tables stop reconciling.
+        run: |
+          FORCE=""
+          if [ "${{ github.event.inputs.force }}" = "true" ]; then FORCE="--force"; fi
+          python scripts/sync_bts.py --months "${{ github.event.inputs.months || '36' }}" --purge-raw $FORCE
+      - name: Validate
+        run: pytest -q
+      - name: Commit refreshed analytical layer
+        run: |
+          if [ -z "$(git status --porcelain data/processed data/metadata)" ]; then
+            echo "No new BTS months; nothing to commit."
+            exit 0
+          fi
+          END=$(python -c "import json;print(json.load(open('data/metadata/metadata.json'))['coverage_end'])")
+          git config user.name "flightops-data-bot"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/processed data/metadata
+          git commit -m "data: refresh BTS on-time data through ${END}"
+          git push
