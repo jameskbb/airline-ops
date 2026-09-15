@@ -1,0 +1,39 @@
+{
+  "month": "2026-04",
+  "source_file": "On_Time_Marketing_Carrier_On_Time_Performance_Beginning_January_2018_2026_4.zip",
+  "source_bytes": 35796979,
+  "raw_rows": 660674,
+  "duplicate_rows": 0,
+  "invalid_date_rows": 0,
+  "out_of_month_rows": 0,
+  "invalid_airport_rows": 0,
+  "loaded_rows": 660674,
+  "cancelled": 5877,
+  "diverted": 1462,
+  "invalid_dep_hour": 0,
+  "null_arr_flag_completed": 0,
+  "null_taxi_out_departed": 0,
+  "cancelled_without_code": 0,
+  "cause_rows": 130203,
+  "cause_reconciled_rows": 130183,
+  "carriers": {
+    "AA": 173556,
+    "DL": 139548,
+    "UA": 129053,
+    "WN": 117814,
+    "AS": 40726,
+    "B6": 20650,
+    "F9": 18540,
+    "NK": 10469,
+    "G4": 10318
+  },
+  "unexpected_carriers": {},
+  "extra_columns": [],
+  "table_rows": {
+    "fact_origin_daily": 33357,
+    "fact_route_monthly": 9054,
+    "fact_origin_hourly": 10792,
+    "fact_route_profile": 76436
+  },
+  "processed_at": "2026-09-15T01:53:37+00:00"
+}
