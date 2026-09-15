@@ -10,7 +10,6 @@ import plotly.graph_objects as go
 import plotly.io as pio
 
 # Surfaces & ink
-PAGE = "#0b0f14"
 SURFACE = "#121821"
 SURFACE_2 = "#18202b"
 BORDER = "#222b36"
@@ -20,11 +19,6 @@ INK = "#e6e9ee"
 INK_2 = "#aab3bf"
 MUTED = "#7d8794"
 ACCENT = "#4c93ea"
-
-# Status (reserved for good/bad meaning; always paired with a sign or label)
-GOOD = "#2fb344"
-BAD = "#e5534b"
-WARN = "#e0a526"
 
 CATEGORICAL = ["#3987e5", "#d95926", "#199e70", "#c98500", "#d55181", "#008300", "#9085e9", "#e66767"]
 OTHER = "#5b6572"

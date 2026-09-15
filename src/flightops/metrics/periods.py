@@ -10,7 +10,7 @@ from __future__ import annotations
 import datetime as dt
 from dataclasses import dataclass
 
-from flightops.data.months import add_months, format_period, month_end, month_key, months_between
+from flightops.data.months import add_months, format_period, month_key, months_between
 
 PRESETS: dict[str, int | None] = {
     "Latest month": 1,
@@ -35,14 +35,6 @@ class Period:
     @property
     def months(self) -> int:
         return months_between(self.start, self.end)
-
-    @property
-    def first_day(self) -> dt.date:
-        return self.start
-
-    @property
-    def last_day(self) -> dt.date:
-        return month_end(self.end)
 
     @property
     def label(self) -> str:

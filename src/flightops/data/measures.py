@@ -91,8 +91,3 @@ def aggregate_sql(names: tuple[str, ...] = MEASURE_NAMES) -> str:
     """SELECT-list fragment computing the named measures from staging rows."""
     by_name = {m.name: m for m in MEASURES}
     return ",\n    ".join(f"CAST(coalesce({by_name[n].sql}, 0) AS INTEGER) AS {n}" for n in names)
-
-
-def rollup_sql(names: tuple[str, ...] = MEASURE_NAMES, prefix: str = "") -> str:
-    """SELECT-list fragment re-summing stored measures (for any coarser grain)."""
-    return ",\n    ".join(f"CAST(sum({prefix}{n}) AS BIGINT) AS {n}" for n in names)

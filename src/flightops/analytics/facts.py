@@ -13,7 +13,7 @@ import pandas as pd
 
 from flightops.data.measures import CAUSE_LABELS
 from flightops.metrics.compare import compare
-from flightops.metrics.definitions import METRICS, cause_mix, safe_div
+from flightops.metrics.definitions import METRICS, cause_mix
 from flightops.metrics.periods import Period
 
 
@@ -123,7 +123,3 @@ def build_brief_facts(
         facts.top_signal = {"headline": top_signal.headline, "detail": top_signal.detail,
                             "severity": top_signal.severity}
     return facts
-
-
-def share_text(numerator: float, denominator: float) -> float:
-    return safe_div(numerator, denominator)

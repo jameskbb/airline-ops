@@ -1,6 +1,7 @@
 """FlightOps Intelligence: U.S. airline operations and network performance.
 
-Run with ``streamlit run app.py``.
+Run with ``streamlit run app.py``. This entrypoint is the router and frame: it sets
+page config, renders the shared sidebar filters and runs the selected page.
 """
 
 from __future__ import annotations
@@ -26,15 +27,16 @@ from flightops.pages import (  # noqa: E402
     airports,
     carriers,
     delay_drivers,
+    explorer,
     methodology,
     network_map,
     overview,
     routes,
     signals,
 )
-from flightops.ui import components, data, filters  # noqa: E402
+from flightops.ui import components, data, filters, nav  # noqa: E402
 
-components.inject_css()
+components.load_css()
 st.logo(str(ROOT / "assets" / "logo.svg"), size="large", icon_image=str(ROOT / "assets" / "icon.svg"))
 
 try:
@@ -43,10 +45,12 @@ except DataNotAvailableError as exc:
     components.empty_state("No processed data found", str(exc))
     st.stop()
 
-pages = {
+explorer_page = st.Page(explorer.render, title="Data Explorer", icon=":material/table_view:", url_path="explorer")
+nav.register(explorer=explorer_page)
+
+navigation = st.navigation({
     "Overview": [
-        st.Page(overview.render, title="Executive Overview", icon=":material/space_dashboard:",
-                url_path="overview", default=True),
+        st.Page(overview.render, title="Executive Overview", icon=":material/space_dashboard:", default=True),
         st.Page(network_map.render, title="Network Map", icon=":material/public:", url_path="network-map"),
         st.Page(signals.render, title="Signals", icon=":material/notifications_active:", url_path="signals"),
     ],
@@ -56,12 +60,12 @@ pages = {
         st.Page(carriers.render, title="Carrier Benchmarking", icon=":material/leaderboard:", url_path="carriers"),
         st.Page(delay_drivers.render, title="Delay Drivers", icon=":material/timer:", url_path="delay-drivers"),
     ],
-    "Reference": [
-        st.Page(methodology.render, title="Methodology & Data", icon=":material/fact_check:", url_path="methodology"),
+    "Data": [
+        explorer_page,
+        st.Page(methodology.render, title="Methodology", icon=":material/fact_check:", url_path="methodology"),
     ],
-}
-
-navigation = st.navigation(pages)
+})
+st.session_state["_page"] = navigation.title
 st.session_state["_filters"] = filters.render_sidebar()
 navigation.run()
 components.footer()

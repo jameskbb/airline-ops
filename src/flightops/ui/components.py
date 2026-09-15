@@ -1,228 +1,240 @@
-"""Reusable presentation components (KPI cards, headers, signal cards, badges).
+"""Reusable UI components built from native Streamlit elements.
 
-Components render small, escaped HTML fragments styled by one stylesheet. Every
-comparison shows its sign and an arrow in addition to color.
+Every aggregated number can be traced back to the query that produced it:
+metric cards and chart sections carry a "?" popover showing the metric definition,
+the input measures, the query's SQL, and a link into the Data Explorer.
 """
 
 from __future__ import annotations
 
-import html
-from collections.abc import Iterable
+from collections.abc import Callable
+from pathlib import Path
 
+import pandas as pd
 import streamlit as st
 
+from flightops.data.measures import MEASURES
 from flightops.data.months import format_month, parse_month
-from flightops.metrics import METRICS, Delta, compare
-from flightops.metrics.periods import Period
-from flightops.ui import data
+from flightops.data.query import Query
+from flightops.metrics import METRICS, Delta, Direction, Period, compare
+from flightops.metrics.definitions import Unit
+from flightops.ui import data, nav
+from flightops.utils.format import fmt_int
 
-CSS = """
-<style>
-:root{--fo-surface:#121821;--fo-surface2:#18202b;--fo-border:#222b36;--fo-ink:#e6e9ee;--fo-ink2:#aab3bf;
---fo-muted:#7d8794;--fo-good:#3fb950;--fo-bad:#f0625a;--fo-warn:#e0a526;--fo-accent:#4c93ea;}
-.block-container{padding-top:1.4rem;padding-bottom:2.5rem;max-width:1500px;}
-[data-testid="stHeader"]{background:transparent;}
-[data-testid="stSidebarNav"] a span{font-size:13.5px;}
-h1,h2,h3{letter-spacing:-0.01em;}
-.fo-brand{display:flex;flex-direction:column;gap:2px;padding:2px 0 10px;border-bottom:1px solid var(--fo-border);margin-bottom:6px}
-.fo-brand-name{font-weight:700;font-size:16px;color:var(--fo-ink);letter-spacing:-0.01em}
-.fo-brand-name span{color:var(--fo-accent)}
-.fo-brand-sub{font-size:11.5px;color:var(--fo-muted)}
-.fo-side-label{font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--fo-muted);font-weight:600;margin:10px 0 2px}
-.fo-header{display:flex;justify-content:space-between;align-items:flex-end;gap:12px 20px;flex-wrap:wrap;
-  border-bottom:1px solid var(--fo-border);padding-bottom:12px;margin-bottom:12px}
-.fo-eyebrow{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--fo-accent);font-weight:600}
-.fo-title{font-size:25px;font-weight:650;color:var(--fo-ink);margin:2px 0 0;line-height:1.2}
-.fo-sub{color:var(--fo-ink2);font-size:13.5px;margin-top:4px;max-width:880px}
-.fo-meta{display:flex;flex-wrap:wrap;align-items:center;gap:6px}
-.fo-badge{border:1px solid var(--fo-border);border-radius:999px;padding:3px 10px;font-size:11.5px;color:var(--fo-ink2);
-  background:#0f141b;white-space:nowrap}
-.fo-badge .dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--fo-accent);margin-right:6px;vertical-align:1px}
-.fo-chips{display:flex;flex-wrap:wrap;gap:6px}
-.fo-chip{font-size:11.5px;color:var(--fo-ink2);background:var(--fo-surface);border:1px solid var(--fo-border);border-radius:5px;padding:2px 8px}
-.fo-chip b{color:var(--fo-ink);font-weight:600}
-.fo-kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(172px,1fr));gap:10px;margin:2px 0 14px}
-.fo-kpi{background:var(--fo-surface);border:1px solid var(--fo-border);border-radius:8px;padding:11px 14px 10px;min-width:0}
-.fo-kpi{cursor:help}
-.fo-kpi-label{font-size:10.5px;color:var(--fo-muted);text-transform:uppercase;letter-spacing:.06em;font-weight:600;
-  display:flex;justify-content:space-between;align-items:flex-start;gap:6px;line-height:1.3;min-height:1.3em}
-.fo-kpi-label i{font-style:normal;flex:none;width:13px;height:13px;border:1px solid #3a4552;border-radius:50%;
-  font-size:9px;line-height:11px;text-align:center;color:#6b7684;text-transform:none;font-family:Georgia,serif}
-.fo-kpi-value{font-size:25px;font-weight:650;color:var(--fo-ink);margin:3px 0 5px;letter-spacing:-0.01em;white-space:nowrap}
-.fo-kpi-note{font-size:11.5px;color:var(--fo-muted)}
-.fo-delta{font-size:11.5px;color:var(--fo-muted);line-height:1.55;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.fo-delta b{font-weight:600}
-.fo-good{color:var(--fo-good)}.fo-bad{color:var(--fo-bad)}.fo-flat{color:var(--fo-ink2)}
-.fo-section{margin:6px 0 6px}
-.fo-section h3{font-size:15px;font-weight:600;color:var(--fo-ink);margin:0;padding:0}
-.fo-section p{font-size:12.5px;color:var(--fo-muted);margin:2px 0 0;line-height:1.45}
-.fo-brief{list-style:none;margin:0;padding:0}
-.fo-brief li{padding:9px 0 9px 16px;border-bottom:1px solid var(--fo-border);position:relative;font-size:13.5px;color:var(--fo-ink);line-height:1.5}
-.fo-brief li:last-child{border-bottom:none}
-.fo-brief li:before{content:"";position:absolute;left:0;top:16px;width:6px;height:6px;border-radius:50%;background:var(--fo-ink2)}
-.fo-brief li.negative:before{background:var(--fo-bad)}.fo-brief li.positive:before{background:var(--fo-good)}
-.fo-brief li.neutral:before{background:var(--fo-accent)}
-.fo-signal{background:var(--fo-surface);border:1px solid var(--fo-border);border-left:3px solid var(--fo-ink2);border-radius:8px;padding:12px 14px;margin-bottom:10px}
-.fo-signal.sev-high{border-left-color:var(--fo-bad)}.fo-signal.sev-elev{border-left-color:var(--fo-warn)}.fo-signal.sev-watch{border-left-color:#56606c}
-.fo-signal.improvement{border-left-color:var(--fo-good)}
-.fo-signal-top{display:flex;justify-content:space-between;gap:10px;align-items:baseline;flex-wrap:wrap}
-.fo-signal-sev{font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;font-weight:700}
-.fo-signal-title{font-size:14.5px;font-weight:600;color:var(--fo-ink);margin:3px 0 4px}
-.fo-signal-detail{font-size:13px;color:var(--fo-ink2);line-height:1.5}
-.fo-signal-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:6px 16px;margin-top:9px;
-  padding-top:8px;border-top:1px solid var(--fo-border)}
-.fo-signal-grid div{font-size:11.5px;color:var(--fo-muted)}.fo-signal-grid b{display:block;color:var(--fo-ink);font-weight:600;font-size:12.5px}
-.fo-empty{border:1px dashed var(--fo-border);border-radius:8px;padding:22px;text-align:center;color:var(--fo-muted);font-size:13px}
-.fo-empty b{display:block;color:var(--fo-ink2);font-size:14px;margin-bottom:4px}
-.fo-footer{margin-top:28px;padding-top:10px;border-top:1px solid var(--fo-border);font-size:11.5px;color:var(--fo-muted)}
-.fo-note{font-size:12px;color:var(--fo-muted);margin:-2px 0 6px}
-.fo-lineage{display:flex;flex-direction:column;gap:0;align-items:stretch;max-width:520px}
-.fo-lineage div.step{background:var(--fo-surface);border:1px solid var(--fo-border);border-radius:6px;padding:8px 12px;font-size:13px;color:var(--fo-ink)}
-.fo-lineage div.step small{display:block;color:var(--fo-muted);font-size:11.5px}
-.fo-lineage div.arrow{height:16px;margin-left:22px;border-left:1px solid #3a4552}
-[data-testid="stMetricValue"]{font-size:22px}
-div[data-testid="stVerticalBlockBorderWrapper"]{border-color:var(--fo-border)!important;background:rgba(18,24,33,.55)}
-</style>
-"""
+STYLE = Path(__file__).resolve().parents[3] / "assets" / "style.css"
+MEASURE_TEXT = {m.name: m.description for m in MEASURES}
+DIRECTION_TEXT = {
+    Direction.HIGHER_IS_BETTER: "Higher is better.",
+    Direction.LOWER_IS_BETTER: "Lower is better.",
+    Direction.NEUTRAL: "Neither direction is better or worse.",
+}
+HELP_ICON = ":material/help:"
 
 
-def inject_css() -> None:
-    st.markdown(CSS, unsafe_allow_html=True)
+def load_css() -> None:
+    st.html(f"<style>{STYLE.read_text()}</style>")
 
 
-def esc(value) -> str:
-    return html.escape(str(value))
-
-
-def freshness_text() -> str:
-    meta = data.metadata()
-    end = meta.get("coverage_end")
+def freshness() -> str:
+    end = data.metadata().get("coverage_end")
     return f"Data through {format_month(parse_month(end))}" if end else "No data loaded"
 
 
-def page_header(eyebrow: str, title: str, subtitle: str, filters=None, show_chips: bool = True) -> None:
-    chips = ""
-    if filters is not None and show_chips:
-        chips = '<div class="fo-chips">' + "".join(
-            f'<span class="fo-chip">{esc(k)} <b>{esc(v)}</b></span>' for k, v in filters.chips
-        ) + "</div>"
-    st.markdown(
-        f"""<div class="fo-header">
-          <div><div class="fo-eyebrow">{esc(eyebrow)}</div><div class="fo-title">{esc(title)}</div>
-          <div class="fo-sub">{esc(subtitle)}</div></div>
-          <div class="fo-meta"><span class="fo-badge" title="BTS publishes monthly with a reporting lag; this is not real-time data">
-          <span class="dot"></span>{esc(freshness_text())} · monthly BTS reporting</span>{chips}</div>
-        </div>""",
-        unsafe_allow_html=True,
-    )
+def page_header(title: str, subtitle: str, filters=None) -> None:
+    st.title(title)
+    st.caption(subtitle)
+    badges = [f":blue-badge[:material/schedule: {freshness()} · monthly BTS reporting]"]
+    if filters is not None:
+        badges += [f":gray-badge[{name}: {value}]" for name, value in filters.chips]
+    st.markdown(" ".join(badges))
 
 
-def section(title: str, caption: str | None = None) -> None:
-    cap = f"<p>{esc(caption)}</p>" if caption else ""
-    st.markdown(f'<div class="fo-section"><h3>{esc(title)}</h3>{cap}</div>', unsafe_allow_html=True)
+# -- query explanations -------------------------------------------------------------
+def query_details(query: Query, key: str) -> None:
+    """Query ID, description, SQL, and a link to open it in the Data Explorer."""
+    st.markdown(f"**Query `{query.id}`**  \n{query.describe()}")
+    if query.not_applied:
+        st.caption(f"Not applied (this table has no such column): {', '.join(query.not_applied)}")
+    st.code(data.sql(query), language="sql")
+    if st.button("Open in Data Explorer", key=f"open-{key}-{query.id}", icon=":material/table_view:"):
+        nav.open_in_explorer(query.id)
 
 
-def delta_html(delta: Delta | None, suffix: str) -> str:
+def explain_metric(key: str, queries: dict[str, Query], values: dict[str, dict], widget_key: str) -> None:
+    """Popover body: definition, calculation, inputs read from the actual results, and the queries."""
+    metric = METRICS[key]
+    st.markdown(f"**{metric.label}**")
+    st.write(metric.definition)
+    st.markdown(f"**Calculation:** `{metric.calculation}`")
+    st.caption(DIRECTION_TEXT[metric.direction])
+    rows = []
+    for measure in metric.requires:
+        row = {"Input": measure, "Meaning": MEASURE_TEXT.get(measure, "")}
+        row.update({name.title(): fmt_int(v.get(measure)) for name, v in values.items() if v})
+        rows.append(row)
+    result = {"Input": f"= {metric.short}", "Meaning": "Result"}
+    result.update({name.title(): metric.format(v.get(key)) for name, v in values.items() if v})
+    st.dataframe(pd.DataFrame([*rows, result]), hide_index=True, width="stretch")
+    for i, (name, query) in enumerate(queries.items()):
+        if i == 0:
+            query_details(query, f"{widget_key}-{name}")
+        else:
+            with st.expander(f"{name.title()} query · {query.id}"):
+                query_details(query, f"{widget_key}-{name}")
+
+
+def comparisons(make_query: Callable[[Period], Query], period: Period, label: str) -> tuple[dict, dict]:
+    """Queries and single-row results for the period, the prior period and the same period last year.
+
+    Comparison periods outside the loaded months are omitted rather than shown as zero.
+    """
+    periods = {"current": period, "previous": period.previous(), "prior year": period.prior_year()}
+    queries, values = {}, {}
+    for name, p in periods.items():
+        if name != "current" and not data.in_range(p):
+            continue
+        queries[name] = make_query(p)
+        values[name] = data.totals(queries[name], f"{label} ({name})")
+    return queries, values
+
+
+def _delta_color(delta: Delta | None) -> str:
+    if delta is None or delta.favorable is None:
+        return "off"
+    return "normal" if (delta.change > 0) == delta.favorable else "inverse"
+
+
+def _delta_markdown(delta: Delta | None, suffix: str) -> str:
     if delta is None:
-        return f'<div class="fo-delta">— {esc(suffix)}</div>'
-    if delta.favorable is None:
-        cls, arrow = "fo-flat", "▲" if delta.change > 0 else "▼" if delta.change < 0 else "■"
-        if abs(delta.change) < 1e-9:
-            arrow = "■"
-    else:
-        cls = "fo-good" if delta.favorable else "fo-bad"
-        arrow = "▲" if delta.change > 0 else "▼"
-    return f'<div class="fo-delta"><b class="{cls}">{arrow} {esc(delta.text)}</b> {esc(suffix)}</div>'
+        return f"— {suffix}"
+    color = "gray" if delta.favorable is None else ("green" if delta.favorable else "red")
+    arrow = ":material/arrow_upward:" if delta.change > 0 else ":material/arrow_downward:"
+    return f":{color}[{arrow} {delta.text}] {suffix}"
 
 
-def kpi_card(metric_key: str, value, comparisons: Iterable[tuple[Delta | None, str]] = (),
-             label: str | None = None, note: str | None = None) -> str:
-    metric = METRICS[metric_key]
-    formatted = metric.format(value, compact=metric_key in ("delay_minutes",) or (value or 0) >= 10_000_000)
-    deltas = "".join(delta_html(d, s) for d, s in comparisons)
-    note_html = f'<div class="fo-kpi-note">{esc(note)}</div>' if note else ""
-    return (
-        f'<div class="fo-kpi" title="{esc(metric.definition)}">'
-        f'<div class="fo-kpi-label"><span>{esc(label or metric.label)}</span><i>i</i></div>'
-        f'<div class="fo-kpi-value">{esc(formatted)}</div>{deltas}{note_html}</div>'
-    )
+def metric_row(keys: list[str], queries: dict[str, Query], values: dict[str, dict],
+               labels: dict[str, str] | None = None, extra: list | None = None) -> None:
+    """KPI cards for ``keys``. ``queries``/``values`` map "current", "previous", "prior year"
+    to the query and its single-row result. ``extra`` adds callables that render more cards."""
+    cards = [lambda k=k: _metric_card(k, queries, values, (labels or {}).get(k)) for k in keys]
+    cards += extra or []
+    for start in range(0, len(cards), 6):
+        for col, card in zip(st.columns(6), cards[start:start + 6], strict=False):
+            with col:
+                card()
 
 
-def text_card(label: str, value: str, note: str = "", tooltip: str = "") -> str:
-    return (
-        f'<div class="fo-kpi" title="{esc(tooltip)}"><div class="fo-kpi-label"><span>{esc(label)}</span></div>'
-        f'<div class="fo-kpi-value">{esc(value)}</div><div class="fo-kpi-note">{esc(note)}</div></div>'
-    )
+def _metric_card(key: str, queries: dict[str, Query], values: dict[str, dict], label: str | None) -> None:
+    metric = METRICS[key]
+    cur, prev, yoy = (values.get(n, {}) for n in ("current", "previous", "prior year"))
+    months = queries["current"].start, queries["current"].end
+    span = 1 if months[0] == months[1] else None
+    d_prev = compare(metric, cur.get(key), prev.get(key)) if prev else None
+    d_yoy = compare(metric, cur.get(key), yoy.get(key)) if yoy else None
+    with st.container(border=True):
+        head, icon = st.columns([5, 1], vertical_alignment="center", gap="small")
+        head.caption(label or metric.label)
+        with icon, st.popover("", icon=HELP_ICON, type="tertiary", help=f"How {metric.label} is calculated"):
+            explain_metric(key, queries, values, f"kpi-{key}")
+        st.metric(label or metric.label, metric.format(cur.get(key), compact=key == "delay_minutes"),
+                  delta=d_prev.text if d_prev else None, delta_color=_delta_color(d_prev),
+                  delta_description="MoM" if span else "vs prior",
+                  label_visibility="collapsed")
+        st.caption(_delta_markdown(d_yoy, "YoY"))
 
 
-def kpi_grid(cards: list[str]) -> None:
-    st.markdown('<div class="fo-kpis">' + "".join(cards) + "</div>", unsafe_allow_html=True)
+def stat_card(label: str, value: str, note: str = "", help: str | None = None) -> None:
+    """A card for a derived statement (percentile, largest cause) with an explanation tooltip."""
+    with st.container(border=True):
+        st.caption(label, help=help)
+        st.metric(label, value, label_visibility="collapsed")
+        st.caption(note or " ")
 
 
-def compare_cards(keys: Iterable[str], period: Period, current: dict, previous: dict, prior_year: dict,
-                  labels: dict[str, str] | None = None) -> list[str]:
-    """KPI cards with prior-period and YoY comparisons for each metric key."""
-    labels = labels or {}
-    prev_label = "vs prior month" if period.months == 1 else f"vs prior {period.months} mo"
-    cards = []
-    for key in keys:
-        metric = METRICS[key]
-        comps = [
-            (compare(metric, current.get(key), previous.get(key)) if previous else None, prev_label),
-            (compare(metric, current.get(key), prior_year.get(key)) if prior_year else None, "YoY"),
-        ]
-        cards.append(kpi_card(key, current.get(key), comps, label=labels.get(key)))
-    return cards
+def section(title: str, caption: str | None = None, queries: dict[str, Query] | None = None,
+            metrics: tuple[str, ...] = ()) -> None:
+    """Section heading with a "?" listing the metrics and queries behind the view."""
+    head, icon = st.columns([14, 1], vertical_alignment="center")
+    head.markdown(f"### {title}")
+    if queries or metrics:
+        with icon, st.popover("", icon=HELP_ICON, type="tertiary", help="How this view is built"):
+            if caption:
+                st.write(caption)
+            for key in metrics:
+                m = METRICS[key]
+                st.markdown(f"**{m.label}** · {m.definition}  \n`{m.calculation}`")
+            for name, query in (queries or {}).items():
+                st.divider()
+                st.caption(name)
+                query_details(query, f"sec-{title}-{name}")
+    if caption:
+        st.caption(caption)
 
 
+def metric_table(df: pd.DataFrame, columns: list[tuple[str, str]], height: int | None = None) -> None:
+    """Dataframe whose metric columns take format and "?" help from the metric registry.
+
+    ``columns`` is a list of (source column, header). Source columns that are metric
+    keys are formatted by unit (rates shown as percentages) and get the definition as help.
+    """
+    out, config = {}, {}
+    for col, header in columns:
+        metric = METRICS.get(col)
+        if metric is None:
+            out[header] = df[col].to_numpy()
+            if pd.api.types.is_integer_dtype(df[col]):
+                config[header] = st.column_config.NumberColumn(header, format="localized")
+            elif pd.api.types.is_float_dtype(df[col]):
+                config[header] = st.column_config.NumberColumn(header, format="%.1f")
+            continue
+        rate = metric.unit is Unit.RATE
+        out[header] = (df[col] * 100 if rate else df[col]).to_numpy()
+        fmt = {Unit.RATE: "%.1f%%", Unit.MINUTES: "%.1f min", Unit.SCORE: "%.1f"}.get(metric.unit, "localized")
+        config[header] = st.column_config.NumberColumn(
+            header, format=fmt, help=f"{metric.definition} Calculation: {metric.calculation}.")
+    st.dataframe(pd.DataFrame(out), hide_index=True, width="stretch", height=height or "auto", column_config=config)
+
+
+# -- other elements --------------------------------------------------------------------
 def brief(statements, provider_name: str) -> None:
-    items = "".join(f'<li class="{esc(s.tone)}">{esc(s.text)}</li>' for s in statements)
-    st.markdown(f'<ul class="fo-brief">{items}</ul>', unsafe_allow_html=True)
-    st.caption(f"Generated by: {provider_name}. Every figure comes from the metric layer; statements are selected by materiality.")
+    color = {"negative": "red", "positive": "green", "neutral": "blue"}
+    st.markdown("\n\n".join(f":{color.get(s.tone, 'gray')}[●]&nbsp; {s.text}" for s in statements))
+    st.caption(f"Generated by {provider_name}. Every figure comes from the queries listed under the \"?\".")
 
 
-SEVERITY_CLASS = {"High impact": "sev-high", "Elevated": "sev-elev", "Watch": "sev-watch"}
-SEVERITY_COLOR = {"High impact": "#f0625a", "Elevated": "#e0a526", "Watch": "#8b95a1"}
+SEVERITY_COLOR = {"High impact": "red", "Elevated": "orange", "Watch": "gray"}
 
 
-def signal_card(signal) -> str:
-    cls = SEVERITY_CLASS[signal.severity] + (" improvement" if signal.direction == "improvement" else "")
+def signal_card(signal) -> None:
     metric = METRICS[signal.metric]
     if signal.kind == "delay_concentration":
-        cur, base = f"{signal.current * 100:.1f}% of delay min", f"{signal.baseline * 100:.1f}% of departures"
+        cur, base = f"{signal.current:.1%} of delay minutes", f"{signal.baseline:.1%} of departures"
     elif signal.kind == "cause_shift":
-        cur, base = f"{signal.current * 100:.1f}% share", f"{signal.baseline * 100:.1f}% share"
+        cur, base = f"{signal.current:.1%} share", f"{signal.baseline:.1%} share"
     else:
         cur, base = metric.format(signal.current), metric.format(signal.baseline)
-    direction = {"deterioration": "Deterioration", "improvement": "Improvement", "shift": "Mix shift"}[signal.direction]
-    color = "#3fb950" if signal.direction == "improvement" else SEVERITY_COLOR[signal.severity]
-    return f"""<div class="fo-signal {cls}">
-      <div class="fo-signal-top"><span class="fo-signal-sev" style="color:{color}">{esc(signal.severity)} · {esc(direction)}</span>
-      <span class="fo-chip">{esc(signal.category)}</span></div>
-      <div class="fo-signal-title">{esc(signal.headline)}</div>
-      <div class="fo-signal-detail">{esc(signal.detail)}</div>
-      <div class="fo-signal-grid">
-        <div>Current<b>{esc(cur)}</b></div><div>Baseline<b>{esc(base)}</b></div>
-        <div>Estimated impact<b>{esc(signal.extras.get("impact_text", "—"))}</b></div>
-        <div>Comparison<b>{esc(signal.comparison)}</b></div>
-      </div>
-      <div class="fo-signal-detail" style="margin-top:8px"><span style="color:#7d8794">Why it matters · </span>{esc(signal.why)}</div>
-    </div>"""
+    tone = "green" if signal.direction == "improvement" else SEVERITY_COLOR[signal.severity]
+    with st.container(border=True):
+        st.markdown(f":{tone}-badge[{signal.severity} · {signal.direction}] :gray-badge[{signal.category}]")
+        st.markdown(f"**{signal.headline}**")
+        st.write(signal.detail)
+        a, b, c = st.columns(3)
+        a.caption(f"Current  \n**{cur}**")
+        b.caption(f"Baseline  \n**{base}**")
+        c.caption(f"Estimated impact  \n**{signal.extras.get('impact_text', '—')}**")
+        st.caption(f"{signal.comparison}. Why it matters: {signal.why}")
 
 
 def empty_state(title: str, message: str) -> None:
-    st.markdown(f'<div class="fo-empty"><b>{esc(title)}</b>{esc(message)}</div>', unsafe_allow_html=True)
+    st.info(f"**{title}.** {message}", icon=":material/info:")
 
 
 def note(text: str) -> None:
-    st.markdown(f'<div class="fo-note">{esc(text)}</div>', unsafe_allow_html=True)
+    st.caption(text)
 
 
 def footer() -> None:
-    meta = data.metadata()
-    st.markdown(
-        f'<div class="fo-footer">Source: U.S. DOT Bureau of Transportation Statistics, Marketing Carrier On-Time '
-        f'Performance | Updated through {esc(meta.get("coverage_end", "—"))} | Historical monthly reporting, '
-        f"not real-time flight status.</div>",
-        unsafe_allow_html=True,
-    )
+    st.divider()
+    st.caption(f"Source: U.S. DOT Bureau of Transportation Statistics, Marketing Carrier On-Time Performance · "
+               f"updated through {data.metadata().get('coverage_end', '—')} · historical monthly reporting, "
+               "not real-time flight status.")

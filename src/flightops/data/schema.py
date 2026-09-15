@@ -70,21 +70,6 @@ KNOWN_UNUSED_COLUMNS: frozenset[str] = frozenset(
     }
 )
 
-DELAY_CAUSE_COLUMNS: dict[str, str] = {
-    "carrier": "CarrierDelay",
-    "weather": "WeatherDelay",
-    "nas": "NASDelay",
-    "security": "SecurityDelay",
-    "late_aircraft": "LateAircraftDelay",
-}
-
-CANCELLATION_CODES: dict[str, str] = {
-    "A": "carrier",
-    "B": "weather",
-    "C": "nas",
-    "D": "security",
-}
-
 
 class SchemaError(RuntimeError):
     """Raised when a source file no longer matches the expected contract."""

@@ -27,10 +27,6 @@ class Delta:
     favorable: bool | None  # None = neutral metric or flat change
     text: str
 
-    @property
-    def is_flat(self) -> bool:
-        return self.favorable is None
-
 
 def _missing(x) -> bool:
     return x is None or (isinstance(x, float) and math.isnan(x))

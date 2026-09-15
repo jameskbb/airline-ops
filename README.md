@@ -11,10 +11,12 @@ need numbers they can trust and defend. Public on-time data can answer those que
 650,000 raw rows a month across 120 columns, with reporting quirks that make naive analysis wrong.
 
 FlightOps Intelligence turns 22.9 million U.S. flight records into an operational view of network reliability, airport
-friction, route health, carrier benchmarking and delay propagation. It is built the way an internal airline BI product
-would be:
+friction, route health, carrier benchmarking and delay propagation.
 
 - **Governed metrics.** Every KPI has one definition, one direction (is up good or bad?) and one place in the code.
+- **Traceable numbers.** Every aggregated figure has a **?** that shows its definition, the input measures and the exact
+  SQL that produced it, with a link into the **Data Explorer**, where the result and the source rows can be inspected and
+  exported to CSV.
 - **Honest comparisons.** Rates move in percentage points, comparisons run against the prior period and the same period
   last year, and minimum-volume rules keep a 40-flight route from outranking a trunk route.
 - **Signals instead of hunting.** A deterministic engine surfaces material, unusual changes and ranks them by estimated
@@ -35,7 +37,8 @@ shows the loaded coverage ("Data through June 2026") on every page and computes 
 | **Route Intelligence** | Directional route KPIs, block-time vs actual, performance by carrier, hour and day, and a **reliability percentile against a documented peer group** (same distance band, minimum volume). |
 | **Carrier Benchmarking** | A sortable ranking, a reliability-vs-cancellation positioning chart, multi-carrier trends and a *relative strengths* matrix oriented so that blue always means better. |
 | **Delay Drivers** | Reported cause mix over time, by carrier, by airport and by time of day, plus the **Delay Propagation Index**: how much of each station's delay is associated with late-arriving aircraft. |
-| **Methodology & Data** | Definitions rendered from the metric layer itself, grain design, lineage, limitations and 15 data-quality checks. |
+| **Data Explorer** | Where did this number come from? The *query store* lists every query the dashboard ran in your session, with its SQL, result, the stored rows it summed and CSV export. The *Tables* tab browses any fact or dimension table with all raw columns, filters and CSV export. |
+| **Methodology** | Definitions rendered from the metric layer itself, grain design, lineage, limitations and 15 data-quality checks. |
 
 ## Architecture
 
@@ -45,27 +48,32 @@ flowchart LR
     M["BTS Master Coordinate<br/>airport attributes"] --> D
     B --> C["DuckDB transform<br/>typed staging + DQ report"]
     C --> D["Parquet analytical layer<br/>4 additive fact tables<br/>1 partition per month"]
-    D --> E["DuckDB query layer<br/>Store.aggregate()"]
-    E --> F["Metric layer<br/>definitions · direction · comparisons"]
+    D --> E["Query<br/>immutable spec · stable ID · SQL"]
+    E --> Q["Store.run()<br/>DuckDB cursor per query"]
+    Q --> S["Session query store<br/>every query a page ran"]
+    Q --> F["Metric layer<br/>definitions · direction · comparisons"]
     F --> G["Analytics<br/>benchmarks · signals · facts"]
     G --> H["Narrative<br/>deterministic rules<br/>(optional LLM narrator)"]
-    F --> I["Streamlit app<br/>st.navigation · cached queries"]
+    F --> I["Streamlit pages<br/>metric ? popovers"]
     G --> I
     H --> I
+    S --> X["Data Explorer<br/>SQL · results · source rows · CSV"]
 ```
 
 ```
-app.py                      entrypoint: navigation, global filters, theme
+app.py                      entrypoint: page config, navigation, global filters
+assets/                     logo, icon, style.css (small layout tweaks on top of the theme)
 src/flightops/
   data/        source.py (PREZIP discovery/download) · schema.py (source contract)
                transform.py (per-month staging, DQ, fact partitions) · pipeline.py (sync, prune, reconcile)
-               store.py (DuckDB query layer) · measures.py (additive measure contract) · reference.py
+               query.py (Query spec: table contract, SQL, IDs) · store.py (executes queries on DuckDB)
+               measures.py (additive measure contract) · reference.py
   metrics/     definitions.py (every KPI) · compare.py (direction-aware deltas) · periods.py
   analytics/   benchmarks.py (peer groups, percentiles, hotspots) · signals.py · facts.py
   narrative/   deterministic.py (brief rules) · providers.py (deterministic + optional LLM)
   charts/      theme.py (design tokens, Plotly template) · builders.py · maps.py (PyDeck)
-  ui/          data.py (st.cache_* wrappers) · filters.py · components.py
-  pages/       one module per page
+  ui/          data.py (caching + query store) · filters.py · components.py (native widgets, ? popovers) · nav.py
+  pages/       one module per page, including explorer.py
 scripts/sync_bts.py         CLI for the pipeline
 data/processed/             committed Parquet facts (~51 MB for 36 months)
 data/metadata/              coverage + per-month data-quality reports
@@ -86,6 +94,10 @@ data/metadata/              coverage + per-month data-quality reports
 - **Idempotent refresh.** Each month is its own Parquet partition per table. Re-running a month replaces exactly that
   month, months outside the window are pruned, and every sync reconciles flight counts across all fact tables against
   the month's data-quality report. A mismatch fails the run.
+- **Every read is a `Query`.** A frozen spec (table, month window, filters, group-by) with a stable ID. The SQL shown in
+  the app is the SQL that runs. Filters a table cannot honor are recorded as *not applied* and shown, never dropped
+  silently. Results are cached with `st.cache_data`; the DuckDB store is a single `st.cache_resource` that opens a
+  cursor per query. Pages record each query in the session's query store, which the Data Explorer reads.
 - **Numbers before narrative.** The *Latest Operations Brief* is generated by rules from a structured facts object. An
   optional LLM narrator can be switched on, but it only receives those facts and cannot calculate. Its output is
   discarded if it contains any figure that isn't in the facts.
@@ -166,11 +178,14 @@ environment variables or Streamlit secrets. Without them, the deterministic brie
 ## Tests
 
 ```bash
-pytest -q          # 40 tests on synthetic fixtures; nothing downloads BTS data
+pytest -q          # 65 tests; nothing downloads BTS data
 ruff check .
 ```
 
 The suite covers:
+- query building, IDs, parameterized SQL and not-applied filters
+- every page rendering through Streamlit's `AppTest`, unfiltered and under filter combinations, and pages recording
+  their queries in the query store
 - the metric definitions and their null and zero-denominator handling
 - cancelled and diverted flight treatment
 - cause aggregation and reconciliation
@@ -186,8 +201,8 @@ CI (`.github/workflows/ci.yml`) runs lint, tests and a reconciliation check of t
 
 ## Technology
 
-Python 3.11+, Streamlit (`st.navigation` / `st.Page`), DuckDB, Parquet (zstd), pandas, Polars, Plotly, PyDeck with
-CARTO basemaps, pytest, ruff and GitHub Actions.
+Python 3.11+, Streamlit (`st.navigation` / `st.Page`), DuckDB, Parquet (zstd), pandas, Plotly, PyDeck with CARTO
+basemaps, pytest, ruff and GitHub Actions.
 
 ## Limitations
 
@@ -198,6 +213,8 @@ CARTO basemaps, pytest, ruff and GitHub Actions.
 - Propagation uses the reported late-aircraft cause and does not trace individual aircraft.
 - Hourly views use the *scheduled* local departure hour at the origin.
 - The population is reporting carriers only. Marketing-carrier rankings differ from DOT's operating-carrier rankings.
+- The app ships aggregated tables (lowest grain: day × carrier × origin), not individual flight records. The sync
+  script rebuilds everything from the BTS source files.
 
 ## Screenshots
 
@@ -206,12 +223,7 @@ CARTO basemaps, pytest, ruff and GitHub Actions.
 | ![Network Map](docs/screenshots/network-map.png) | ![Signals](docs/screenshots/signals.png) |
 | ![Airport Performance](docs/screenshots/airports.png) | ![Route Intelligence](docs/screenshots/routes.png) |
 | ![Carrier Benchmarking](docs/screenshots/carriers.png) | ![Delay Drivers](docs/screenshots/delay-drivers.png) |
-
-## Why I built it
-
-Most public BI portfolio projects emphasize visualization. This one covers the full lifecycle of an analytical product:
-source ingestion, metric governance, dimensional modeling, signal detection, executive communication and interactive
-reporting, all against a real, messy federal dataset.
+| ![Metric help popover](docs/screenshots/metric-help.png) | ![Data Explorer](docs/screenshots/data-explorer.png) |
 
 ## License
 

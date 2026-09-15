@@ -6,6 +6,7 @@ import pytest
 
 from flightops.data import pipeline
 from flightops.data.months import add_months, month_range, parse_month
+from flightops.data.query import Query
 from flightops.data.schema import SchemaError, validate_header
 from flightops.data.source import parse_index
 from flightops.data.store import Store
@@ -48,10 +49,15 @@ def test_quality_report_counts(processed):
     assert set(report.table_rows) == set(FACT_TABLES)
 
 
+def _totals(store: Store, table: str, start=JUNE, end=JUNE, **filters) -> dict:
+    df = store.run(Query.build(table, start, end, **filters))
+    return {} if df.empty else df.iloc[0].to_dict()
+
+
 def test_facts_handle_cancelled_diverted_and_null_causes(processed):
     out, meta, _ = processed
     store = Store(out, meta)
-    totals = store.totals("fact_route_monthly", JUNE, JUNE)
+    totals = _totals(store, "fact_route_monthly")
     assert totals["flights"] == 8
     assert totals["arr_eligible"] == 6  # cancelled + diverted excluded
     assert totals["arr_del15"] == 3
@@ -69,7 +75,7 @@ def test_fact_tables_reconcile(processed):
 def test_route_identifiers_directional_and_market(processed):
     out, meta, _ = processed
     store = Store(out, meta)
-    routes = store.aggregate("fact_route_monthly", JUNE, JUNE, by=["route", "market"], metrics=False)
+    routes = store.run(Query.build("fact_route_monthly", JUNE, JUNE, by=("route", "market")))
     assert set(routes["route"]) == {"DFW→DEN", "DFW→ORD"}
     assert set(routes["market"]) == {"DEN–DFW", "DFW–ORD"}
 
@@ -77,21 +83,29 @@ def test_route_identifiers_directional_and_market(processed):
 def test_filters_and_unsupported_filters(processed):
     out, meta, _ = processed
     store = Store(out, meta)
-    dl = store.totals("fact_route_monthly", JUNE, JUNE, {"carrier": "DL"})
-    assert dl["flights"] == 1
-    multi = store.totals("fact_route_monthly", JUNE, JUNE, {"carrier": ["AA", "DL"]})
-    assert multi["flights"] == 7
-    with pytest.raises(ValueError):
-        store.aggregate("fact_origin_daily", JUNE, JUNE, {"dest": "DEN"})
+    assert _totals(store, "fact_route_monthly", carrier="DL")["flights"] == 1
+    assert _totals(store, "fact_route_monthly", carrier=["AA", "DL"])["flights"] == 7
+    # The daily table has no destination: the filter is reported as not applied, never silently used.
+    q = Query.build("fact_origin_daily", JUNE, JUNE, dest="DEN")
+    assert q.not_applied == ("dest",) and store.run(q).iloc[0]["flights"] == 8
+
+
+def test_source_rows_and_counts(processed):
+    out, meta, _ = processed
+    store = Store(out, meta)
+    rows = Query.build("fact_route_monthly", JUNE, JUNE, rows=True, carrier="AA")
+    assert store.count(rows) == len(store.run(rows)) == 2
+    assert {"flights", "arr_del15", "carrier", "origin", "dest"} <= set(store.run(rows).columns)
+    assert len(store.run(rows, limit=1)) == 1
 
 
 def test_date_filtering_excludes_months_outside_window(processed):
     out, meta, _ = processed
     store = Store(out, meta)
-    assert store.totals("fact_route_monthly", dt.date(2026, 5, 1), dt.date(2026, 5, 1)) == {}
-    hours = store.aggregate("fact_origin_hourly", JUNE, JUNE, by=["dep_hour"])
+    assert _totals(store, "fact_route_monthly", dt.date(2026, 5, 1), dt.date(2026, 5, 1)) == {}
+    hours = store.run(Query.build("fact_origin_hourly", JUNE, JUNE, by=("dep_hour",)))
     assert set(hours["dep_hour"]) == {8, 17, 19}
-    dow = store.aggregate("fact_origin_daily", JUNE, JUNE, by=["dow"])
+    dow = store.run(Query.build("fact_origin_daily", JUNE, JUNE, by=("dow",)))
     assert list(dow["dow"]) == [1]
 
 

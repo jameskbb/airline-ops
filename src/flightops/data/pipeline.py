@@ -20,7 +20,7 @@ from flightops.config import (
 )
 from flightops.data.months import month_key, month_range, parse_month
 from flightops.data.reference import build_dim_airport, carrier_rows, download_master_coordinate
-from flightops.data.source import download_month, list_available_months
+from flightops.data.source import download_month, file_name, list_available_months
 from flightops.data.transform import FACT_TABLES, process_month
 
 MASTER_COORD_MAX_AGE_DAYS = 30
@@ -203,8 +203,6 @@ def run_sync(
 ) -> dict:
     """Run the full sync. Safe to re-run: loaded months are skipped unless ``force``."""
     if offline:
-        from flightops.data.source import parse_index  # noqa: F401 - offline uses the raw cache listing
-
         available = sorted(
             {parse_month(f"{p.stem.split('_')[-2]}-{p.stem.split('_')[-1]}") for p in raw_dir.glob("*.zip")}
         )
@@ -228,7 +226,7 @@ def run_sync(
     (metadata_dir / "months").mkdir(parents=True, exist_ok=True)
     for index, month in enumerate(plan.to_process, start=1):
         started = time.time()
-        zip_path = download_month(month, raw_dir) if not offline else raw_dir / _raw_name(month)
+        zip_path = download_month(month, raw_dir) if not offline else raw_dir / file_name(month)
         report = process_month(zip_path, month, processed_dir)
         (metadata_dir / "months" / f"{report.month}.json").write_text(json.dumps(report.to_dict(), indent=2) + "\n")
         flags = []
@@ -262,9 +260,3 @@ def run_sync(
         f"{metadata['flights_loaded']:,} flights, processed facts {total_mb:.1f} MB"
     )
     return metadata
-
-
-def _raw_name(month: dt.date) -> str:
-    from flightops.data.source import file_name
-
-    return file_name(month)
