@@ -40,6 +40,17 @@ shows the loaded coverage ("Data through June 2026") on every page and computes 
 | **Data Explorer** | Where did this number come from? The *query store* lists every query the dashboard ran in your session, with its SQL, result, the stored rows it summed and CSV export. The *Tables* tab browses any fact or dimension table with all raw columns, filters and CSV export. |
 | **Methodology** | Definitions rendered from the metric layer itself, grain design, lineage, limitations and 15 data-quality checks. |
 
+### Tracing a number
+
+1. Click the **?** on any KPI card or chart section. It shows the metric's definition and calculation, the input
+   measures behind the value (current, prior period and prior year), and the SQL that produced them.
+2. Click **Open in Data Explorer**. The query is preselected in the *Query store* tab with its result, the stored rows
+   it summed and a CSV download.
+3. Use the *Tables* tab to browse any fact or dimension table with all of its raw columns, filters and CSV export.
+
+The query store belongs to your session. It lists every query the pages you visited ran, including the filter options,
+signals and operations-brief inputs.
+
 ## Architecture
 
 ```mermaid
@@ -224,6 +235,7 @@ basemaps, pytest, ruff and GitHub Actions.
 | ![Airport Performance](docs/screenshots/airports.png) | ![Route Intelligence](docs/screenshots/routes.png) |
 | ![Carrier Benchmarking](docs/screenshots/carriers.png) | ![Delay Drivers](docs/screenshots/delay-drivers.png) |
 | ![Metric help popover](docs/screenshots/metric-help.png) | ![Data Explorer](docs/screenshots/data-explorer.png) |
+| ![Methodology](docs/screenshots/methodology.png) | |
 
 ## License
 
