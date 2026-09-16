@@ -22,3 +22,7 @@ data/reference/
 .DS_Store
 .idea/
 .vscode/
+
+# Local agent/planning workspace (kept on disk, not part of the public repo)
+.claude/
+.planning/
