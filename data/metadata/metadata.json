@@ -2,7 +2,7 @@
   "source": "U.S. DOT Bureau of Transportation Statistics",
   "dataset": "Marketing Carrier On-Time Performance (Beginning January 2018)",
   "source_url": "https://www.transtats.bts.gov/Tables.asp?QO_VQ=EFD&QO_anzr=Nv4yv0r",
-  "generated_at": "2026-09-15T01:53:38+00:00",
+  "generated_at": "2026-09-20T02:58:27+00:00",
   "coverage_start": "2023-07",
   "coverage_end": "2026-06",
   "months_loaded": [
