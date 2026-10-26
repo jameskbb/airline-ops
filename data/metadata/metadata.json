@@ -2,11 +2,10 @@
   "source": "U.S. DOT Bureau of Transportation Statistics",
   "dataset": "Marketing Carrier On-Time Performance (Beginning January 2018)",
   "source_url": "https://www.transtats.bts.gov/Tables.asp?QO_VQ=EFD&QO_anzr=Nv4yv0r",
-  "generated_at": "2026-10-19T17:33:19+00:00",
-  "coverage_start": "2023-08",
-  "coverage_end": "2026-07",
+  "generated_at": "2026-10-26T17:26:39+00:00",
+  "coverage_start": "2023-09",
+  "coverage_end": "2026-08",
   "months_loaded": [
-    "2023-08",
     "2023-09",
     "2023-10",
     "2023-11",
@@ -41,26 +40,27 @@
     "2026-04",
     "2026-05",
     "2026-06",
-    "2026-07"
+    "2026-07",
+    "2026-08"
   ],
   "months_requested_missing": [],
-  "latest_published_month": "2026-07",
-  "raw_rows_processed": 22924918,
-  "flights_loaded": 22924918,
+  "latest_published_month": "2026-08",
+  "raw_rows_processed": 22957747,
+  "flights_loaded": 22957747,
   "table_rows": {
-    "fact_origin_daily": 1240278,
-    "fact_route_monthly": 317633,
-    "fact_origin_hourly": 388475,
-    "fact_route_profile": 2657832
+    "fact_origin_daily": 1239057,
+    "fact_route_monthly": 317719,
+    "fact_origin_hourly": 388938,
+    "fact_route_profile": 2667530
   },
   "table_bytes": {
-    "fact_origin_daily": 18751827,
-    "fact_route_monthly": 12080030,
-    "fact_origin_hourly": 8055636,
-    "fact_route_profile": 11799638
+    "fact_origin_daily": 18787518,
+    "fact_route_monthly": 12092911,
+    "fact_origin_hourly": 8081837,
+    "fact_route_profile": 11854059
   },
   "dimensions": {
-    "dim_airport": 371,
+    "dim_airport": 372,
     "dim_airport_missing_coordinates": 0
   }
 }
