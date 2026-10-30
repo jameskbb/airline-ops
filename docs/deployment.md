@@ -27,15 +27,19 @@ brief.
 
 ## How updates reach the live app
 
-- **Every push to `main` redeploys.** Community Cloud watches the branch and pulls each new commit within a few
-  minutes; a change to `requirements.txt` triggers a reinstall. Nothing else has to run.
+- **Every push to `main` reaches the app.** Community Cloud watches the branch and pulls each new commit into the
+  running app within a few minutes. A change to `requirements.txt` reinstalls dependencies and restarts the process;
+  other pushes do not restart it.
 - **Data refreshes deploy themselves.** The [refresh workflow](../.github/workflows/refresh-data.yml) runs every
   Monday at 11:17 UTC (and on demand), tests the new data and pushes a `data: refresh BTS on-time data through
   YYYY-MM` commit straight to `main` when BTS has published a new month. That push redeploys the app. Because
   Parquet files are not source code, a running server would otherwise keep serving cached results, so `app.py` calls
   `refresh_if_data_changed()` on each rerun: when the committed data files change it clears `st.cache_data` and
   reopens the DuckDB store.
-- **Code changes** go through CI on the push or pull request; merge to `main` to deploy.
+- **Code changes** go through CI on the push or pull request; merge to `main` to deploy. Modules the process has
+  already imported stay in memory after a pull, so a push that changes code under `src/` can mix old and new
+  modules (for example an `ImportError` for a name the push added). After such a push, reboot the app from its
+  menu in the Community Cloud workspace, then reload.
 - **Reboot** from the app's menu in the Community Cloud workspace if the app is stuck or after changing settings.
 
 ## Behavior to expect

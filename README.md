@@ -266,7 +266,7 @@ published a new month, and that commit to `main` redeploys the [live demo](https
 
 ## Deployment
 
-The live demo runs on Streamlit Community Cloud from `main`, installs `requirements.txt` and redeploys on every push.
+The live demo runs on Streamlit Community Cloud from `main` and installs `requirements.txt`; reboot it after code pushes.
 See [docs/deployment.md](docs/deployment.md) for settings, the update flow and how to reboot it.
 
 ## Develop and contribute
