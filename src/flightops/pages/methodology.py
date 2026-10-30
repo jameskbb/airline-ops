@@ -20,7 +20,7 @@ from flightops.data.query import TABLE_DESCRIPTIONS
 from flightops.metrics import METRICS
 from flightops.ui import components as ui
 from flightops.ui import data
-from flightops.utils.format import fmt_int
+from flightops.utils.format import NO_DATA, fmt_int
 
 LINEAGE = """
 digraph {
@@ -50,9 +50,9 @@ def render() -> None:
         ("Coverage", f"{len(loaded)} months",
          f"{format_month(parse_month(meta['coverage_start']), 'short')} – {format_month(end, 'short')}" if end else ""),
         ("Flights analyzed", fmt_int(meta.get("flights_loaded")), f"{fmt_int(meta.get('raw_rows_processed'))} raw rows"),
-        ("Reporting lag", f"{lag} months" if lag is not None else "—",
-         f"Latest BTS month published: {meta.get('latest_published_month', '—')}"),
-        ("Last refresh", (meta.get("generated_at") or "—")[:10], "UTC, by scripts/sync_bts.py"),
+        ("Reporting lag", f"{lag} months" if lag is not None else NO_DATA,
+         f"Latest BTS month published: {meta.get('latest_published_month', NO_DATA)}"),
+        ("Last refresh", (meta.get("generated_at") or NO_DATA)[:10], "UTC, by scripts/sync_bts.py"),
         ("Analytical layer", f"{sum(meta.get('table_bytes', {}).values()) / 1e6:.1f} MB",
          f"{fmt_int(sum(meta.get('table_rows', {}).values()))} aggregate rows"),
     ], strict=True):
@@ -90,7 +90,7 @@ reporting threshold (0.5% of domestic scheduled-passenger revenue), plus carrier
 here means this reporting population, not all U.S. aviation.
 
 **Freshness.** BTS publishes each month roughly two to three months after it ends. This is historical operational
-reporting, not live flight status. The newest loaded month is **{meta.get('coverage_end', '—')}**.
+reporting, not live flight status. The newest loaded month is **{meta.get('coverage_end', NO_DATA)}**.
 """)
     seen = set().union(*data.month_reports()["carriers"])
     carriers = data.dimension("dim_carrier")
@@ -188,7 +188,7 @@ def _quality(meta: dict, reports: pd.DataFrame) -> None:
     st.dataframe(pd.DataFrame([
         ("Months loaded", f"{len(reports)} of {len(months)} in window", status(not missing)),
         ("Missing months", ", ".join(missing) or "None", status(not missing)),
-        ("Latest available period", meta.get("latest_published_month", "—"), "Info"),
+        ("Latest available period", meta.get("latest_published_month", NO_DATA), "Info"),
         ("Raw rows processed", fmt_int(total("raw_rows")), "Info"),
         ("Duplicate code-share rows excluded", fmt_int(total("duplicate_rows")), "Info"),
         ("Invalid or out-of-month dates", fmt_int(total("invalid_date_rows") + total("out_of_month_rows")),
@@ -203,7 +203,7 @@ def _quality(meta: dict, reports: pd.DataFrame) -> None:
          status(total("cancelled_without_code") == 0)),
         ("Delay causes reconcile to arrival delay (±1 min)", f"{cause_rate:.3%} of delayed flights", status(cause_rate > 0.99)),
         ("Fact tables reconcile to loaded rows", "Verified at every sync (the sync fails otherwise)", "Pass"),
-        ("Airports without coordinates", str(meta.get("dimensions", {}).get("dim_airport_missing_coordinates", "—")),
+        ("Airports without coordinates", str(meta.get("dimensions", {}).get("dim_airport_missing_coordinates", NO_DATA)),
          status(not meta.get("dimensions", {}).get("dim_airport_missing_coordinates"))),
     ], columns=["Check", "Result", "Status"]), hide_index=True, width="stretch")
     per_month = pd.DataFrame({

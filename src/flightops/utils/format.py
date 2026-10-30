@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import math
 
-DASH = "—"
+NO_DATA = "No data"  # placeholder for a missing value
 
 
 def _missing(value) -> bool:
@@ -15,12 +15,12 @@ def _missing(value) -> bool:
 
 
 def fmt_int(value) -> str:
-    return DASH if _missing(value) else f"{round(value):,}"
+    return NO_DATA if _missing(value) else f"{round(value):,}"
 
 
 def fmt_compact(value, digits: int = 1) -> str:
     if _missing(value):
-        return DASH
+        return NO_DATA
     magnitude = abs(value)
     for threshold, suffix in ((1e9, "B"), (1e6, "M"), (1e3, "K")):
         if magnitude >= threshold:
@@ -30,24 +30,24 @@ def fmt_compact(value, digits: int = 1) -> str:
 
 def fmt_pct(value, digits: int = 1) -> str:
     """Format a 0–1 rate as a percentage."""
-    return DASH if _missing(value) else f"{value * 100:.{digits}f}%"
+    return NO_DATA if _missing(value) else f"{value * 100:.{digits}f}%"
 
 
 def fmt_minutes(value, digits: int = 1) -> str:
-    return DASH if _missing(value) else f"{value:.{digits}f} min"
+    return NO_DATA if _missing(value) else f"{value:.{digits}f} min"
 
 
 def fmt_score(value, digits: int = 1) -> str:
-    return DASH if _missing(value) else f"{value:.{digits}f}"
+    return NO_DATA if _missing(value) else f"{value:.{digits}f}"
 
 
 def fmt_ratio(value, digits: int = 2) -> str:
-    return DASH if _missing(value) else f"{value:.{digits}f}×"
+    return NO_DATA if _missing(value) else f"{value:.{digits}f}×"
 
 
 def fmt_signed(value, digits: int = 1, suffix: str = "") -> str:
     if _missing(value):
-        return DASH
+        return NO_DATA
     rounded = round(value, digits)
     if rounded == 0:
         rounded = 0.0  # avoid "-0.0"
@@ -61,7 +61,7 @@ def fmt_pts(value, digits: int = 1) -> str:
 
 def fmt_pct_change(value, digits: int = 1) -> str:
     """Relative change; ``value`` is a fraction (0.041 → +4.1%)."""
-    return DASH if _missing(value) else fmt_signed(value * 100, digits, "%")
+    return NO_DATA if _missing(value) else fmt_signed(value * 100, digits, "%")
 
 
 def fmt_ordinal(n: int) -> str:

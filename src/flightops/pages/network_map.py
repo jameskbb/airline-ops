@@ -34,7 +34,7 @@ NONE = "Network overview"
 def _primary_cause(row) -> str:
     values = {c: row[m] for c, m in CAUSE_MEASURES.items()}
     cause = max(values, key=values.get)
-    return CAUSE_LABELS[cause] if values[cause] > 0 else "—"
+    return CAUSE_LABELS[cause] if values[cause] > 0 else "None reported"
 
 
 def _score(values: pd.Series, reference: float, metric_key: str) -> pd.Series:

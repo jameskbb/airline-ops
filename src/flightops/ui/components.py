@@ -19,7 +19,7 @@ from flightops.data.query import Query
 from flightops.metrics import METRICS, Delta, Direction, Period, compare
 from flightops.metrics.definitions import Unit
 from flightops.ui import data, nav
-from flightops.utils.format import fmt_int
+from flightops.utils.format import NO_DATA, fmt_int
 
 STYLE = Path(__file__).resolve().parents[3] / "assets" / "style.css"
 MEASURE_TEXT = {m.name: m.description for m in MEASURES}
@@ -106,7 +106,7 @@ def _delta_color(delta: Delta | None) -> str:
 
 def _delta_markdown(delta: Delta | None, suffix: str) -> str:
     if delta is None:
-        return f"— {suffix}"
+        return f"No {suffix} comparison"
     color = "gray" if delta.favorable is None else ("green" if delta.favorable else "red")
     arrow = ":material/arrow_upward:" if delta.change > 0 else ":material/arrow_downward:"
     return f":{color}[{arrow} {delta.text}] {suffix}"
@@ -221,7 +221,7 @@ def signal_card(signal) -> None:
         a, b, c = st.columns(3)
         a.caption(f"Current  \n**{cur}**")
         b.caption(f"Baseline  \n**{base}**")
-        c.caption(f"Estimated impact  \n**{signal.extras.get('impact_text', '—')}**")
+        c.caption(f"Estimated impact  \n**{signal.extras.get('impact_text', NO_DATA)}**")
         st.caption(f"{signal.comparison}. Why it matters: {signal.why}")
 
 
@@ -236,5 +236,5 @@ def note(text: str) -> None:
 def footer() -> None:
     st.divider()
     st.caption(f"Source: U.S. DOT Bureau of Transportation Statistics, Marketing Carrier On-Time Performance · "
-               f"updated through {data.metadata().get('coverage_end', '—')} · historical monthly reporting, "
+               f"updated through {data.metadata().get('coverage_end', NO_DATA)} · historical monthly reporting, "
                "not real-time flight status.")

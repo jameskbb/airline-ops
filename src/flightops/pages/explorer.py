@@ -91,7 +91,7 @@ def _query_store() -> None:
     left, right = st.columns([1, 1.25], gap="large")
     with left:
         st.markdown(f"**{query.describe()}**")
-        st.caption(f"Used for: {'; '.join(entry['labels'])} · pages: {', '.join(entry['pages']) or '—'}")
+        st.caption(f"Used for: {'; '.join(entry['labels'])} · pages: {', '.join(entry['pages']) or 'none'}")
         if query.not_applied:
             st.caption(f"Filters not applied (the table has no such column): {', '.join(query.not_applied)}")
         st.code(data.sql(query), language="sql")

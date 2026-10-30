@@ -12,7 +12,7 @@ from flightops.metrics import METRICS, Period
 from flightops.ui import components as ui
 from flightops.ui import data
 from flightops.ui.filters import current
-from flightops.utils.format import fmt_int, fmt_ordinal
+from flightops.utils.format import NO_DATA, fmt_int, fmt_ordinal
 
 DOW = {1: "Mon", 2: "Tue", 3: "Wed", 4: "Thu", 5: "Fri", 6: "Sat", 7: "Sun"}
 HOURS = {h: f"{h:02d}" for h in range(24)}
@@ -72,7 +72,7 @@ def render() -> None:
     peer_help = (f"Share of peer routes with a lower on-time rate. Peers: directional routes in the {band} band "
                  f"with ≥{MIN_ROUTE_FLIGHTS_PER_MONTH} flights/month in this period and scope. Source: the 'Route "
                  "list and peer groups' query in the Data Explorer.")
-    extra = [lambda: ui.stat_card("Reliability percentile", fmt_ordinal(round(pct)) if pct is not None else "—",
+    extra = [lambda: ui.stat_card("Reliability percentile", fmt_ordinal(round(pct)) if pct is not None else NO_DATA,
                                   f"vs {len(peers):,} peer routes ({band})" if pct is not None
                                   else f"Needs ≥{MIN_ROUTE_FLIGHTS_PER_MONTH} flights/month", help=peer_help)]
     ui.metric_row(KPIS, queries, values, extra=extra)
