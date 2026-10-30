@@ -21,7 +21,7 @@ you can clone it and start exploring immediately. No data download or API key is
 > FlightOps analyzes historical BTS reporting. It is not a live flight tracker, disruption-management system or
 > prediction service.
 
-![From reports to insight: make 22.9 million flights understandable](docs/images/readme-header-problem.png)
+![From reports to insight: make 23.0 million flights understandable](docs/images/readme-header-problem.png)
 
 ## Why FlightOps exists
 
@@ -281,6 +281,14 @@ python -c "from flightops.data.pipeline import reconcile; print(len(reconcile())
 The test suite covers query construction, metric behavior, comparison direction, page rendering, filter combinations,
 route identity, schema validation, idempotent refreshes, reconciliation, signal thresholds and deterministic narrative.
 It uses synthetic source data where needed and does not download BTS files.
+
+The screenshots in this README come from a headless browser run of the app. Re-shoot them after any interface or data
+change (Playwright is used only here, never by the app):
+
+```bash
+uv run --no-project --with-requirements requirements.txt --with playwright==1.62.0 \
+  python scripts/capture_screenshots.py
+```
 
 Issues and pull requests are welcome. Changes to analytical behavior should keep definitions centralized, preserve
 additive fact-table contracts, document new assumptions and include tests for denominator and edge-case behavior.
