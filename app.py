@@ -18,7 +18,7 @@ st.set_page_config(
     page_title="FlightOps Intelligence",
     page_icon=str(ROOT / "assets" / "icon.svg"),
     layout="wide",
-    initial_sidebar_state="expanded",
+    initial_sidebar_state="auto",  # open on desktop, collapsed on phones
 )
 
 from flightops.charts import theme  # noqa: E402,F401  (registers the Plotly template)
