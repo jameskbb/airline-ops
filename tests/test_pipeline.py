@@ -144,3 +144,28 @@ def test_resolve_window_and_index_parsing():
     assert pipeline.resolve_window(available, months=1) == [JUNE]
     assert pipeline.resolve_window(available, start="2026-04", end="2026-05") == [dt.date(2026, 4, 1), dt.date(2026, 5, 1)]
     assert add_months(JUNE, -13) == dt.date(2025, 5, 1)
+
+
+def test_master_coordinate_download_retries_transient_failures(tmp_path, monkeypatch):
+    from flightops.data import reference
+
+    calls = []
+
+    def flaky(dest, timeout):
+        calls.append(dest)
+        if len(calls) < 3:
+            raise RuntimeError("Master Coordinate form field __EVENTVALIDATION not found; TranStats page changed")
+        dest.write_text("AIRPORT_ID\n")
+        return dest
+
+    monkeypatch.setattr(reference, "_download_master_coordinate_once", flaky)
+    monkeypatch.setattr(reference.time, "sleep", lambda _: None)
+    out = reference.download_master_coordinate(tmp_path / "mc.csv", attempts=4)
+    assert out.read_text() == "AIRPORT_ID\n" and len(calls) == 3
+
+    def always_down(dest, timeout):
+        raise RuntimeError("down")
+
+    monkeypatch.setattr(reference, "_download_master_coordinate_once", always_down)
+    with pytest.raises(RuntimeError, match="down"):
+        reference.download_master_coordinate(tmp_path / "mc.csv", attempts=2)

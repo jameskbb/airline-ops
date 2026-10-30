@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import io
 import re
+import time
 import zipfile
 from pathlib import Path
 
@@ -52,12 +53,27 @@ def carrier_rows() -> list[tuple[str, str, str]]:
     return [(code, meta["name"], meta["short"]) for code, meta in sorted(CARRIERS.items())]
 
 
-def download_master_coordinate(dest: Path, timeout: int = 180) -> Path:
+def download_master_coordinate(dest: Path, timeout: int = 180, attempts: int = 4, backoff: float = 30.0) -> Path:
     """Download the BTS Aviation Support Tables Master Coordinate table as CSV.
 
     TranStats exposes this table through an ASP.NET form, so we replay the form
-    post with the hidden view-state fields from a fresh GET.
+    post with the hidden view-state fields from a fresh GET. TranStats sometimes
+    serves a page without those fields or a non-ZIP response, so each attempt
+    starts a fresh session and failures are retried with linear backoff.
     """
+    for attempt in range(1, attempts + 1):
+        try:
+            return _download_master_coordinate_once(dest, timeout)
+        except (RuntimeError, requests.RequestException, zipfile.BadZipFile) as exc:
+            if attempt == attempts:
+                raise
+            wait = backoff * attempt
+            print(f"Master Coordinate attempt {attempt}/{attempts} failed ({exc}); retrying in {wait:.0f}s")
+            time.sleep(wait)
+    raise AssertionError("unreachable")
+
+
+def _download_master_coordinate_once(dest: Path, timeout: int) -> Path:
     session = requests.Session()
     session.headers["User-Agent"] = "flightops-intelligence/1.0 (+https://github.com/jameskbb/airline-ops)"
     page = session.get(BTS_MASTER_COORD_URL, timeout=timeout)
