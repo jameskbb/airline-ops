@@ -39,6 +39,7 @@ from flightops.ui import components, data, filters, nav  # noqa: E402
 components.load_css()
 st.logo(str(ROOT / "assets" / "logo.svg"), size="large", icon_image=str(ROOT / "assets" / "icon.svg"))
 
+data.refresh_if_data_changed()
 try:
     data.store()
 except DataNotAvailableError as exc:

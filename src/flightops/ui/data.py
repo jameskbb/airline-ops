@@ -3,6 +3,8 @@
 * ``store()`` is one shared DuckDB-backed store per process (``st.cache_resource``).
 * ``_execute()`` memoizes query results (``st.cache_data`` returns copies, so pages
   can modify frames safely).
+* ``refresh_if_data_changed()`` drops both caches when the committed Parquet layer
+  changes under a running server (a data refresh pushed to main and pulled by the host).
 * ``run()`` is what pages call. It records the query in the session's query store
   before returning the cached result. Logging stays outside cached functions,
   because cached functions do not replay side effects on cache hits.
@@ -11,13 +13,19 @@
 from __future__ import annotations
 
 import datetime as dt
+import hashlib
 
 import pandas as pd
 import streamlit as st
 
 from flightops.analytics import signals as sig
 from flightops.analytics.facts import build_brief_facts
-from flightops.config import MIN_AIRPORT_DEPARTURES_PER_MONTH, MIN_CARRIER_FLIGHTS_PER_MONTH
+from flightops.config import (
+    METADATA_DIR,
+    MIN_AIRPORT_DEPARTURES_PER_MONTH,
+    MIN_CARRIER_FLIGHTS_PER_MONTH,
+    PROCESSED_DIR,
+)
 from flightops.data.months import add_months
 from flightops.data.query import Query
 from flightops.data.store import Store
@@ -30,6 +38,33 @@ LOG_LIMIT = 400
 @st.cache_resource(show_spinner=False)
 def store() -> Store:
     return Store()
+
+
+def data_stamp() -> str:
+    """Fingerprint of the committed data files (names, sizes, mtimes); cheap enough per rerun."""
+    files = [METADATA_DIR / "metadata.json", *sorted(PROCESSED_DIR.rglob("*.parquet"))]
+    digest = hashlib.sha1()
+    for path in files:
+        if path.exists():
+            stat = path.stat()
+            digest.update(f"{path}:{stat.st_size}:{stat.st_mtime_ns}\n".encode())
+    return digest.hexdigest()
+
+
+@st.cache_resource(show_spinner=False)
+def _seen_stamp() -> dict[str, str]:
+    return {}
+
+
+def refresh_if_data_changed() -> bool:
+    """Clear cached results and the store when the data files changed since the last rerun."""
+    stamp, seen = data_stamp(), _seen_stamp()
+    changed = seen.setdefault("stamp", stamp) != stamp
+    if changed:
+        st.cache_data.clear()
+        store.clear()
+        seen["stamp"] = stamp
+    return changed
 
 
 @st.cache_data(show_spinner=False, max_entries=1024)
