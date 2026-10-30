@@ -1,5 +1,6 @@
 /* Small layout adjustments on top of the Streamlit theme in .streamlit/config.toml. */
-.block-container { padding-top: 1.6rem; padding-bottom: 2.5rem; max-width: 1500px; }
+/* Clear Streamlit's fixed 60px header: Community Cloud paints it opaque over the page title. */
+[data-testid="stMainBlockContainer"], .block-container { padding-top: 80px; padding-bottom: 2.5rem; max-width: 1500px; }
 [data-testid="stHeader"] { background: transparent; }
 h1 { font-size: 1.75rem !important; letter-spacing: -0.01em; padding-bottom: 0.1rem !important; }
 h3 { font-size: 1.05rem !important; font-weight: 600 !important; padding: 0 !important; }
