@@ -6,12 +6,14 @@
 [![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-3776AB.svg)](https://www.python.org/)
 [![License: MIT](https://img.shields.io/badge/license-MIT-4c93ea.svg)](LICENSE)
 
+**Live demo:** [airline-ops.streamlit.app](https://airline-ops.streamlit.app/), hosted on Streamlit Community Cloud.
+
 FlightOps Intelligence is an open-source dashboard for understanding how the U.S. airline network is performing and
 where operational friction is building. It turns official monthly on-time reporting into an explorable view of the
 network, airports, routes, carriers and delay drivers.
 
-The repository includes 36 months of processed data—22,866,159 flights from July 2023 through June 2026—so you can clone
-it and start exploring immediately. No data download or API key is required.
+The repository includes 36 months of processed data (22,957,747 flights from September 2023 through August 2026), so
+you can clone it and start exploring immediately. No data download or API key is required.
 
 [![Executive Overview with network KPIs, trends, operational hotspots and a generated operations brief](docs/screenshots/overview.png)](docs/screenshots/overview.png)
 
@@ -29,7 +31,7 @@ roughly 650,000 rows and 120 columns. The useful questions sit several transform
 - Was the network genuinely worse, or did traffic mix change?
 - Is an airport struggling relative to similar hubs or only relative to the national average?
 - Is a route unreliable for its distance and volume, or merely small and noisy?
-- Which changes are unusual enough—and affect enough flights—to deserve attention?
+- Which changes are unusual enough, and affect enough flights, to deserve attention?
 - Are delays concentrated in a station, time of day, carrier or reported cause?
 
 Straight averages and league tables answer these questions badly. They can average rates across incompatible groups,
@@ -154,7 +156,7 @@ FlightOps is opinionated about the easy ways operational analysis goes wrong:
 - **Keep narrative downstream of facts.** The default operations brief is deterministic. An optional LLM narrator can
   only restate an approved facts object, and output containing an unknown number is discarded.
 - **Make evidence inspectable.** Metric help shows the definition and inputs. The Data Explorer can show the exact query,
-  result and stored rows, but traceability supports the analysis—it is not the product's only purpose.
+  result and stored rows, but traceability supports the analysis; it is not the product's only purpose.
 
 <details>
 <summary><strong>Core metric definitions</strong></summary>
@@ -193,7 +195,7 @@ flights with unusualness. The executable rules live in `src/flightops/analytics/
 - **Flights:** U.S. DOT Bureau of Transportation Statistics, *Marketing Carrier On-Time Performance (Beginning January
   2018)*, downloaded from the TranStats PREZIP directory.
 - **Airports:** BTS Aviation Support Tables, *Master Coordinate*, using the latest record for each airport.
-- **Included:** July 2023 through June 2026; 36 months; 22,866,159 flights; 370 airports; 8–10 marketing carriers,
+- **Included:** September 2023 through August 2026; 36 months; 22,957,747 flights; 372 airports; 8–10 marketing carriers,
   depending on month.
 - **Distribution:** About 51 MB of zstd-compressed Parquet is committed to the repository. The lowest stored grain is
   day × marketing carrier × origin; individual flight records are not distributed.
@@ -260,7 +262,12 @@ schema, transforms each month and reconciles every fact table. A full 36-month r
 source ZIPs are cached.
 
 The [refresh workflow](.github/workflows/refresh-data.yml) runs weekly and on demand. It commits only when BTS has
-published a new month.
+published a new month, and that commit to `main` redeploys the [live demo](https://airline-ops.streamlit.app/).
+
+## Deployment
+
+The live demo runs on Streamlit Community Cloud from `main`, installs `requirements.txt` and redeploys on every push.
+See [docs/deployment.md](docs/deployment.md) for settings, the update flow and how to reboot it.
 
 ## Develop and contribute
 
