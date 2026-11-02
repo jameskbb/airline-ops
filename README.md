@@ -2,9 +2,13 @@
 
 ![FlightOps Intelligence: operational insight from public aviation data](docs/images/readme-title-flightops-intelligence.png)
 
-[![CI](https://github.com/jameskbb/airline-ops/actions/workflows/ci.yml/badge.svg)](https://github.com/jameskbb/airline-ops/actions/workflows/ci.yml)
-[![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-3776AB.svg)](https://www.python.org/)
-[![License: MIT](https://img.shields.io/badge/license-MIT-4c93ea.svg)](LICENSE)
+<p align="center">
+  <a href="https://github.com/jameskbb/airline-ops/actions/workflows/ci.yml"><img alt="CI" src="https://img.shields.io/github/actions/workflow/status/jameskbb/airline-ops/ci.yml?branch=main&style=for-the-badge&logo=githubactions&logoColor=white&label=CI"></a>
+  <a href="LICENSE"><img alt="License" src="https://img.shields.io/badge/License-MIT-blue?style=for-the-badge"></a>
+  <a href="pyproject.toml"><img alt="Python" src="https://img.shields.io/badge/dynamic/toml?url=https%3A%2F%2Fraw.githubusercontent.com%2Fjameskbb%2Fairline-ops%2Fmain%2Fpyproject.toml&query=%24.project%5B%27requires-python%27%5D&label=Python&style=for-the-badge&logo=python&logoColor=white&color=3776AB"></a>
+  <a href="pyproject.toml"><img alt="DuckDB" src="https://img.shields.io/badge/DuckDB-query%20engine-FFD500?style=for-the-badge&logo=duckdb&logoColor=black"></a>
+  <a href="https://airline-ops.streamlit.app/"><img alt="Live app" src="https://img.shields.io/badge/Live-Streamlit-FF4B4B?style=for-the-badge&logo=streamlit&logoColor=white"></a>
+</p>
 
 **Live demo:** [airline-ops.streamlit.app](https://airline-ops.streamlit.app/), hosted on Streamlit Community Cloud.
 
