@@ -16,13 +16,15 @@ data/reference/
 
 # Secrets
 .streamlit/secrets.toml
-.env
+.env*
+!.env.example
 
 # OS / editor
 .DS_Store
 .idea/
 .vscode/
 
-# Local agent/planning workspace (kept on disk, not part of the public repo)
-.claude/
+# Local planning workspace and per-machine assistant state
 .planning/
+.claude/settings.local.json
+.claude/worktrees/
